@@ -144,6 +144,56 @@
     .sessions strong {
       color: #8b4513;
     }
+
+    .focus-selector {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #e9d5c5;
+    }
+
+    .focus-selector label {
+      display: block;
+      color: #8b4513;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .focus-select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e9d5c5;
+      border-radius: 12px;
+      font-size: 15px;
+      background: #fff;
+      color: #8b4513;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .focus-select:focus {
+      outline: none;
+      border-color: #c05621;
+      box-shadow: 0 0 0 3px rgba(192, 86, 33, 0.15);
+    }
+
+    .link-to-planner {
+      margin-top: 16px;
+      color: #a67c52;
+      font-size: 13px;
+    }
+
+    .link-to-planner a {
+      color: #c05621;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .link-to-planner a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -170,6 +220,16 @@
     <div class="sessions">
       Completed sessions: <strong id="sessionCount">0</strong>
     </div>
+
+    <div class="focus-selector">
+      <label for="focusSelect">Working on:</label>
+      <select class="focus-select" id="focusSelect">
+        <option value="-1">General / No specific focus</option>
+      </select>
+      <div class="link-to-planner">
+        <a href="../focus-planner" target="_blank">Open Daily Focus Planner →</a>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -190,11 +250,37 @@
     const startBtn = document.getElementById('startBtn');
     const resetBtn = document.getElementById('resetBtn');
     const sessionCountEl = document.getElementById('sessionCount');
+    const focusSelect = document.getElementById('focusSelect');
     const dots = {
       work: document.getElementById('dot-work'),
       short: document.getElementById('dot-short'),
       long: document.getElementById('dot-long')
     };
+
+    function loadFocusGoals() {
+      try {
+        const saved = localStorage.getItem('focus-planner-data');
+        if (saved) {
+          const data = JSON.parse(saved);
+          if (data.date === new Date().toDateString() && data.focuses) {
+            focusSelect.innerHTML = '<option value="-1">General / No specific focus</option>' +
+              data.focuses.map((f, i) => 
+                `<option value="${i}">${escapeHtml(f.text)}</option>`
+              ).join('');
+            return;
+          }
+        }
+      } catch (e) {
+        console.log('Could not load focus goals');
+      }
+      focusSelect.innerHTML = '<option value="-1">General / No specific focus</option>';
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
     function formatTime(seconds) {
       const mins = Math.floor(seconds / 60);
@@ -224,6 +310,16 @@
       if (currentMode === 'work') {
         completedSessions++;
         sessionCountEl.textContent = completedSessions;
+        
+        // Notify focus planner
+        const focusIndex = parseInt(focusSelect.value);
+        if (typeof window.focusPlannerAddPomodoro === 'function') {
+          window.focusPlannerAddPomodoro(focusIndex);
+        } else {
+          // Cross-tab communication
+          localStorage.setItem('pomodoro-session-complete', focusIndex.toString());
+          setTimeout(() => localStorage.removeItem('pomodoro-session-complete'), 100);
+        }
         
         if (completedSessions % 4 === 0) {
           switchMode('longBreak');
@@ -288,6 +384,14 @@
 
     startBtn.addEventListener('click', toggleTimer);
     resetBtn.addEventListener('click', resetTimer);
+
+    // Load focus goals on mount and when storage changes
+    loadFocusGoals();
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'focus-planner-data') {
+        loadFocusGoals();
+      }
+    });
 
     updateDisplay();
   </script>

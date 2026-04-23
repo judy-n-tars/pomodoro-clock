@@ -11,10 +11,15 @@ A simple, beautiful Pomodoro timer with warm autumn colors. Built for focus sess
 - Audio notifications
 - Session counter
 - Responsive design
+- **Integrates with Daily Focus Planner** — track which goals you're working on
 
 ## Live Demo
 
 [**Open Pomodoro Clock**](https://judy-n-tars.github.io/pomodoro-clock)
+
+## Companion App
+
+[**Daily Focus Planner**](https://judy-n-tars.github.io/focus-planner) — Plan your day and track Pomodoros per goal
 
 ## Quick Start
 
@@ -55,6 +60,7 @@ The app will be available at: `https://<username>.github.io/pomodoro-clock`
 - CSS3 (no frameworks)
 - Vanilla JavaScript
 - Web Audio API for notifications
+- localStorage for Focus Planner integration
 
 ## License
 
