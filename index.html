@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomodoro Clock</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #d4a574 0%, #c4956a 50%, #a67c52 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fef9f3;
+      border-radius: 24px;
+      padding: 48px 40px;
+      box-shadow: 0 10px 40px rgba(139, 69, 19, 0.25);
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #8b4513;
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: #a67c52;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .timer-display {
+      background: linear-gradient(135deg, #e89f71 0%, #d48c5a 100%);
+      border-radius: 16px;
+      padding: 40px 20px;
+      margin-bottom: 32px;
+      box-shadow: inset 0 4px 12px rgba(139, 69, 19, 0.15);
+    }
+
+    .time {
+      font-size: 72px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(139, 69, 19, 0.3);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .status {
+      color: #fff;
+      font-size: 16px;
+      margin-top: 12px;
+      opacity: 0.95;
+      font-weight: 500;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 110px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #c05621 0%, #9c4221 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #dd6b36 0%, #b5502b 100%);
+    }
+
+    .btn-secondary {
+      background: #e9d5c5;
+      color: #8b4513;
+    }
+
+    .btn-secondary:hover {
+      background: #f0dfd5;
+    }
+
+    .mode-indicators {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .mode-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d4c4b8;
+      transition: all 0.3s ease;
+    }
+
+    .mode-dot.active {
+      background: #c05621;
+      transform: scale(1.2);
+    }
+
+    .sessions {
+      margin-top: 24px;
+      color: #a67c52;
+      font-size: 14px;
+    }
+
+    .sessions strong {
+      color: #8b4513;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🍂 Pomodoro</h1>
+    <p class="subtitle">Focus timer</p>
+
+    <div class="mode-indicators">
+      <div class="mode-dot active" id="dot-work"></div>
+      <div class="mode-dot" id="dot-short"></div>
+      <div class="mode-dot" id="dot-long"></div>
+    </div>
+
+    <div class="timer-display">
+      <div class="time" id="timer">25:00</div>
+      <div class="status" id="status">Time to focus</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-primary" id="startBtn">Start</button>
+      <button class="btn-secondary" id="resetBtn">Reset</button>
+    </div>
+
+    <div class="sessions">
+      Completed sessions: <strong id="sessionCount">0</strong>
+    </div>
+  </div>
+
+  <script>
+    const MODES = {
+      work: { time: 25 * 60, label: 'Time to focus' },
+      shortBreak: { time: 5 * 60, label: 'Short break' },
+      longBreak: { time: 15 * 60, label: 'Long break' }
+    };
+
+    let currentMode = 'work';
+    let timeLeft = MODES.work.time;
+    let isRunning = false;
+    let interval = null;
+    let completedSessions = 0;
+
+    const timerEl = document.getElementById('timer');
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const sessionCountEl = document.getElementById('sessionCount');
+    const dots = {
+      work: document.getElementById('dot-work'),
+      short: document.getElementById('dot-short'),
+      long: document.getElementById('dot-long')
+    };
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function updateDisplay() {
+      timerEl.textContent = formatTime(timeLeft);
+      statusEl.textContent = MODES[currentMode].label;
+    }
+
+    function updateDots() {
+      dots.work.classList.toggle('active', currentMode === 'work');
+      dots.short.classList.toggle('active', currentMode === 'shortBreak');
+      dots.long.classList.toggle('active', currentMode === 'longBreak');
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      timeLeft = MODES[mode].time;
+      updateDisplay();
+      updateDots();
+    }
+
+    function completeSession() {
+      if (currentMode === 'work') {
+        completedSessions++;
+        sessionCountEl.textContent = completedSessions;
+        
+        if (completedSessions % 4 === 0) {
+          switchMode('longBreak');
+        } else {
+          switchMode('shortBreak');
+        }
+      } else {
+        switchMode('work');
+      }
+      
+      isRunning = false;
+      startBtn.textContent = 'Start';
+      playNotification();
+    }
+
+    function playNotification() {
+      try {
+        const audio = new AudioContext();
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+        
+        oscillator.connect(gain);
+        gain.connect(audio.destination);
+        
+        oscillator.frequency.value = 880;
+        oscillator.type = 'sine';
+        gain.gain.setValueAtTime(0.3, audio.currentTime);
+        
+        oscillator.start(audio.currentTime);
+        oscillator.stop(audio.currentTime + 0.3);
+      } catch (e) {
+        console.log('Audio not supported');
+      }
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        clearInterval(interval);
+        isRunning = false;
+        startBtn.textContent = 'Start';
+      } else {
+        isRunning = true;
+        startBtn.textContent = 'Pause';
+        interval = setInterval(() => {
+          timeLeft--;
+          updateDisplay();
+          
+          if (timeLeft <= 0) {
+            completeSession();
+          }
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(interval);
+      isRunning = false;
+      startBtn.textContent = 'Start';
+      timeLeft = MODES[currentMode].time;
+      updateDisplay();
+    }
+
+    startBtn.addEventListener('click', toggleTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    updateDisplay();
+  </script>
+</body>
+</html>
